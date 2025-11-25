@@ -46,23 +46,41 @@ dump.rdb
 .DS_Store
 *.pem
 
+# Environment Variables
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+*.env
+.env.deployment.template
+
 # Python
 __pycache__/
-*pyc*
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
 venv/
-.venv/
-
-# Development tools
-chainlit.md
-.chainlit
-.ipynb_checkpoints/
-.ac
-
-# Deployment
-.vercel
-
-# Data and databases
-agenthub/agents/youtube/db
+ENV/
+env//db
 
 # Archive files and large assets
 **/*.zip
