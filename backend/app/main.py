@@ -14,14 +14,21 @@ app = FastAPI(
 )
 
 # Set all CORS enabled origins
-origins = []
+origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://priyesh-lost-n-found.vercel.app",
+    "https://lost-found-pri.vercel.app",
+]
+
 if settings.BACKEND_CORS_ORIGINS:
-    origins = settings.BACKEND_CORS_ORIGINS if isinstance(settings.BACKEND_CORS_ORIGINS, list) else [settings.BACKEND_CORS_ORIGINS]
+    settings_origins = settings.BACKEND_CORS_ORIGINS if isinstance(settings.BACKEND_CORS_ORIGINS, list) else [settings.BACKEND_CORS_ORIGINS]
+    origins.extend(settings_origins)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost.*",
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Keep regex as backup
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
