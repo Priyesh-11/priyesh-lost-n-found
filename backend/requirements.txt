@@ -13,3 +13,4 @@ slowapi
 boto3
 Pillow
 alembic
+cloudinary
