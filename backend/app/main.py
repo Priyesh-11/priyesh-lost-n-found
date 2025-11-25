@@ -31,7 +31,8 @@ if settings.BACKEND_CORS_ORIGINS:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[], # Disable explicit list to rely on regex
+    allow_origin_regex=".*", # Allow ALL origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
