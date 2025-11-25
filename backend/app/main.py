@@ -25,15 +25,6 @@ if settings.BACKEND_CORS_ORIGINS:
     settings_origins = (
         settings.BACKEND_CORS_ORIGINS 
         if isinstance(settings.BACKEND_CORS_ORIGINS, list) 
-        else [settings.BACKEND_CORS_ORIGINS]
-    )
-    origins.extend(settings_origins)
-
-from starlette.middleware.base import BaseHTTPMiddleware
-from fastapi import Request, Response
-
-# Custom Middleware to FORCE CORS headers
-class ForceCORSMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.method == "OPTIONS":
             response = Response()
@@ -41,8 +32,15 @@ class ForceCORSMiddleware(BaseHTTPMiddleware):
             try:
                 response = await call_next(request)
             except Exception as e:
-                # Ensure headers are sent even on error
-                response = Response(content=str(e), status_code=500)
+                # Log the full traceback to console (Render logs)
+                logging.error("🔥 UNCAUGHT EXCEPTION 🔥")
+                traceback.print_exc()
+                
+                # Return JSON error so frontend can see it
+                response = JSONResponse(
+                    content={"detail": f"Internal Server Error: {str(e)}"}, 
+                    status_code=500
+                )
 
         origin = request.headers.get("origin")
         if origin:
