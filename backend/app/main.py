@@ -29,10 +29,37 @@ if settings.BACKEND_CORS_ORIGINS:
     )
     origins.extend(settings_origins)
 
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi import Request, Response
+
+# Custom Middleware to FORCE CORS headers
+class ForceCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "OPTIONS":
+            response = Response()
+        else:
+            try:
+                response = await call_next(request)
+            except Exception as e:
+                # Ensure headers are sent even on error
+                response = Response(content=str(e), status_code=500)
+
+        origin = request.headers.get("origin")
+        if origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+        
+        return response
+
+app.add_middleware(ForceCORSMiddleware)
+
+# Keep standard middleware as backup (optional, but good for other features)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[], # Disable explicit list to rely on regex
-    allow_origin_regex=".*", # Allow ALL origins
+    allow_origins=[], 
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
