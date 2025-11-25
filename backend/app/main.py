@@ -2,8 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+
 from app.core.config import settings
-from app.api.v1.endpoints import auth, users, items, admin, analytics
+from app.api.v1.endpoints import auth, users, items, admin, analytics, claims
 from app.middleware.rate_limiter import limiter
 from app.middleware.error_handler import global_exception_handler, rate_limit_handler
 
@@ -13,19 +14,18 @@ app = FastAPI(
 )
 
 # Set all CORS enabled origins
-# Set all CORS enabled origins
-    origins = []
-    if settings.BACKEND_CORS_ORIGINS:
-        origins = settings.BACKEND_CORS_ORIGINS if isinstance(settings.BACKEND_CORS_ORIGINS, list) else [settings.BACKEND_CORS_ORIGINS]
-    
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_origin_regex=r"https://.*\.vercel\.app|http://localhost.*",
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+origins = []
+if settings.BACKEND_CORS_ORIGINS:
+    origins = settings.BACKEND_CORS_ORIGINS if isinstance(settings.BACKEND_CORS_ORIGINS, list) else [settings.BACKEND_CORS_ORIGINS]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost.*",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Rate Limiting
 app.state.limiter = limiter
@@ -38,7 +38,6 @@ app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["u
 app.include_router(items.router, prefix=f"{settings.API_V1_STR}/items", tags=["items"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
 app.include_router(analytics.router, prefix=f"{settings.API_V1_STR}/analytics", tags=["analytics"])
-from app.api.v1.endpoints import claims
 app.include_router(claims.router, prefix=f"{settings.API_V1_STR}/claims", tags=["claims"])
 
 @app.get("/")

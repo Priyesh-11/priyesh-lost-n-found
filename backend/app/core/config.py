@@ -1,7 +1,6 @@
 from pydantic_settings import BaseSettings
-from pydantic import EmailStr, AnyHttpUrl, field_validator
+from pydantic import EmailStr, field_validator
 from typing import List, Optional, Union
-import json
 
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"

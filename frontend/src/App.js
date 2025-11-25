@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
@@ -37,21 +37,6 @@ const Layout = ({ children }) => {
 };
 
 function App() {
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Simulate initial loading (you can replace this with actual data fetching)
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000); // Reduced to 1 second for better UX
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (loading) {
-    return <PageLoader />;
-  }
-
   return (
     <AuthProvider>
       <BrowserRouter>

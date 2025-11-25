@@ -1,6 +1,8 @@
 import axios from 'axios';
 
 // Hardcoded for production deployment - change for local development
+// NOTE: This is required because Vercel environment variables were causing issues.
+// DO NOT CHANGE THIS URL unless you are sure about the deployment configuration.
 const API_URL = 'https://priyesh-lost-n-found-backend.onrender.com/api/v1';
 
 const api = axios.create({
