@@ -30,7 +30,15 @@ class Settings(BaseSettings):
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
+        elif isinstance(v, str) and v.startswith("["):
+            # Handle JSON-like strings (including single quotes)
+            import json
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                # Fallback for single quotes or malformed JSON
+                return [i.strip().strip("'").strip('"') for i in v.strip("[]").split(",")]
+        elif isinstance(v, list):
             return v
         raise ValueError(v)
     
