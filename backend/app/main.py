@@ -15,18 +15,18 @@ app = FastAPI(
 )
 
 
-app.add_middleware(
-    TrustedHostMiddleware, 
-    allowed_hosts=["*"] # In production, replace with specific hosts if possible
-)
-
 # Standard CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Temporarily allow all for debugging
+    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS] if settings.BACKEND_CORS_ORIGINS else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+app.add_middleware(
+    TrustedHostMiddleware, 
+    allowed_hosts=["*"] # In production, replace with specific hosts if possible
 )
 
 # Rate Limiting
