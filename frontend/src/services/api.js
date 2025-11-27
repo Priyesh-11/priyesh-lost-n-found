@@ -4,7 +4,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://priyesh-lost-n-found-b
 
 const api = axios.create({
     baseURL: API_URL,
-    withCredentials: true,  // IMPORTANT: Required for CORS with credentials
+    // withCredentials: true,  // Removed to avoid strict CORS preflight issues
     headers: {
         'Content-Type': 'application/json',
     },
