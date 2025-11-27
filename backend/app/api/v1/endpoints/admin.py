@@ -13,7 +13,7 @@ from app.models.item import ItemStatus
 router = APIRouter()
 
 def check_admin_permissions(current_user: User):
-    if current_user.role_id != 2: # Admin Role ID
+    if current_user.role_id != 3: # Admin Role ID
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
 @router.get("/claims", response_model=List[Claim])

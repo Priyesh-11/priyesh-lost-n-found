@@ -1,6 +1,7 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.api import deps
 from app.schemas.item import ItemCreate, ItemOut, ItemUpdate, ItemFilter, CategoryOut
 from app.crud.crud_item import item as crud_item
@@ -53,12 +54,19 @@ def read_items(
     )
     
     # Add claims count to each item
+    # Optimize claims count using a single query
+    item_ids = [item.id for item in items]
+    claims_counts = db.query(
+        crud_claim.model.item_id, func.count(crud_claim.model.id).label('count')
+    ).filter(
+        crud_claim.model.item_id.in_(item_ids),
+        crud_claim.model.status == 'pending'
+    ).group_by(crud_claim.model.item_id).all()
+    
+    claims_map = {item_id: count for item_id, count in claims_counts}
+    
     for item in items:
-        claims_count = db.query(crud_claim.model).filter(
-            crud_claim.model.item_id == item.id,
-            crud_claim.model.status == 'pending'
-        ).count()
-        item.claims_count = claims_count
+        item.claims_count = claims_map.get(item.id, 0)
     
     return items
 

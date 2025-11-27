@@ -27,7 +27,7 @@ const AdminDashboard = () => {
     useEffect(() => {
         if (!isAuthenticated) {
             navigate('/login');
-        } else if (user && user.role_id !== 2) {
+        } else if (user && user.role_id !== 3) {
             navigate('/');
             toast({
                 title: "Access Denied",
@@ -63,7 +63,7 @@ const AdminDashboard = () => {
     };
 
     useEffect(() => {
-        if (user && user.role_id === 2) {
+        if (user && user.role_id === 3) {
             fetchData();
         }
     }, [user]);

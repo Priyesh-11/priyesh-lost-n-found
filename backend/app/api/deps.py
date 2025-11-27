@@ -41,11 +41,12 @@ def get_current_active_user(
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
+ADMIN_ROLE_ID = 3
+
 def get_current_active_superuser(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    # Role ID 3 is Admin. Ideally, use an Enum or constant from models.
-    if current_user.role_id != 3: 
+    if current_user.role_id != ADMIN_ROLE_ID: 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="The user doesn't have enough privileges"

@@ -8,6 +8,13 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: Optional[str]) -> Any:
+        if isinstance(v, str) and v.startswith("mysql://"):
+            return v.replace("mysql://", "mysql+pymysql://")
+        return v
     
     # Security
     SECRET_KEY: str

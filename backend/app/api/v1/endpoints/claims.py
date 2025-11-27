@@ -61,6 +61,6 @@ def read_claim(
     claim = crud_claim.get(db=db, id=id)
     if not claim:
         raise HTTPException(status_code=404, detail="Claim not found")
-    if claim.claimant_id != current_user.id and current_user.role_id != 2: # Assuming 2 is Admin
+    if claim.claimant_id != current_user.id and current_user.role_id != 3: # Admin ID is 3
         raise HTTPException(status_code=400, detail="Not enough permissions")
     return claim

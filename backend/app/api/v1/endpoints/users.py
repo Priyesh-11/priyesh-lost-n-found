@@ -2,7 +2,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.api import deps
-from app.schemas.user import UserOut, UserUpdate
+from app.schemas.user import UserOut, UserUpdate, UserBasic
 from app.crud.crud_user import user as crud_user
 from app.models.user import User
 
@@ -24,7 +24,7 @@ def update_user_me(
     user = crud_user.update(db, db_obj=current_user, obj_in=user_in)
     return user
 
-@router.get("/{user_id}", response_model=UserOut)
+@router.get("/{user_id}", response_model=UserBasic)
 def read_user_by_id(
     user_id: int,
     current_user: User = Depends(deps.get_current_active_user),

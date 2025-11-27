@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -13,51 +14,16 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Set all CORS enabled origins
-origins = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "https://priyesh-lost-n-found.vercel.app",
-    "https://lost-found-pri.vercel.app",
-]
 
-if settings.BACKEND_CORS_ORIGINS:
-    settings_origins = (
-        settings.BACKEND_CORS_ORIGINS 
-        if isinstance(settings.BACKEND_CORS_ORIGINS, list) 
-    async def dispatch(self, request: Request, call_next):
-        if request.method == "OPTIONS":
-            response = Response()
-        else:
-            try:
-                response = await call_next(request)
-            except Exception as e:
-                # Log the full traceback to console (Render logs)
-                logging.error("🔥 UNCAUGHT EXCEPTION 🔥")
-                traceback.print_exc()
-                
-                # Return JSON error so frontend can see it
-                response = JSONResponse(
-                    content={"detail": f"Internal Server Error: {str(e)}"}, 
-                    status_code=500
-                )
+app.add_middleware(
+    TrustedHostMiddleware, 
+    allowed_hosts=["*"] # In production, replace with specific hosts if possible
+)
 
-        origin = request.headers.get("origin")
-        if origin:
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
-        
-        return response
-
-app.add_middleware(ForceCORSMiddleware)
-
-# Keep standard middleware as backup (optional, but good for other features)
+# Standard CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[], 
-    allow_origin_regex=".*",
+    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS] if settings.BACKEND_CORS_ORIGINS else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
