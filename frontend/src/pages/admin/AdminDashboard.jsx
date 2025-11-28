@@ -66,6 +66,16 @@ const AdminDashboard = () => {
         if (user && user.role_id === 3) {
             fetchData();
         }
+        
+        // Refresh when page becomes visible (user returns to tab)
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && user && user.role_id === 3) {
+                fetchData();
+            }
+        };
+        
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [user]);
 
     const handleVerifyClaim = async (claimId, status) => {

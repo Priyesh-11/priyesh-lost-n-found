@@ -21,6 +21,18 @@ def cors_json(content: dict, status_code: int = 400, origin: str = None):
     )
 
 async def global_exception_handler(request: Request, exc: Exception):
+    import logging
+    import traceback
+    
+    logger = logging.getLogger(__name__)
+    
+    # Log the full exception with traceback for debugging
+    logger.error(
+        f"Unhandled exception: {type(exc).__name__}: {str(exc)}\n"
+        f"Traceback: {traceback.format_exc()}\n"
+        f"Request: {request.method} {request.url}"
+    )
+    
     origin = request.headers.get("origin", "https://lost-found-pri.vercel.app")
     return cors_json(
         content={"detail": "Internal Server Error"},

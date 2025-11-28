@@ -25,49 +25,60 @@ const ItemDetailPage = () => {
   const [matches, setMatches] = useState([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
 
-  useEffect(() => {
-    const fetchItemAndClaim = async () => {
-      try {
-        const data = await itemsService.getById(id);
-        // Transform API data to match component expectation
-        const transformedItem = {
-          ...data,
-          category: data.category ? data.category.name : data.category_id, // Use name if available
-          images: data.images && data.images.length > 0 ? data.images.map(img => img.image_url) : [],
-          contactInfo: data.owner ? {
-            name: data.owner.full_name || data.owner.username,
-            email: data.owner.email,
-            phone: data.owner.phone || 'Not provided'
-          } : { name: 'Unknown', email: '', phone: '' },
-          date: data.date_lost || data.created_at // Map date_lost to date
-        };
-        setItem(transformedItem);
+  const fetchItemAndClaim = async () => {
+    try {
+      setLoading(true);
+      const data = await itemsService.getById(id);
+      // Transform API data to match component expectation
+      const transformedItem = {
+        ...data,
+        category: data.category ? data.category.name : data.category_id, // Use name if available
+        images: data.images && data.images.length > 0 ? data.images.map(img => img.image_url) : [],
+        contactInfo: data.owner ? {
+          name: data.owner.full_name || data.owner.username,
+          email: data.owner.email,
+          phone: data.owner.phone || 'Not provided'
+        } : { name: 'Unknown', email: '', phone: '' },
+        date: data.date_lost || data.created_at // Map date_lost to date
+      };
+      setItem(transformedItem);
 
-        // Check if user has claimed this item
-        if (user && data.type === 'found' && data.user_id !== user.id) {
-          try {
-            const myClaims = await claimsService.getMyClaims();
-            const claim = myClaims.find(c => c.item_id === parseInt(id));
-            setUserClaim(claim);
-          } catch (err) {
-            console.error("Failed to fetch claims", err);
-          }
+      // Check if user has claimed this item
+      if (user && data.type === 'found' && data.user_id !== user.id) {
+        try {
+          const myClaims = await claimsService.getMyClaims();
+          const claim = myClaims.find(c => c.item_id === parseInt(id));
+          setUserClaim(claim);
+        } catch (err) {
+          console.error("Failed to fetch claims", err);
         }
+      }
 
-      } catch (error) {
-        console.error("Failed to fetch item:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load item details",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
+    } catch (error) {
+      console.error("Failed to fetch item:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load item details",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchItemAndClaim();
+    
+    // Refresh when page becomes visible (user returns to tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchItemAndClaim();
       }
     };
-
-    fetchItemAndClaim();
-  }, [id, toast, user]);
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [id, user]);
 
   // Fetch matches for lost items owned by current user
   useEffect(() => {
@@ -372,11 +383,8 @@ const ItemDetailPage = () => {
                 itemId={item.id}
                 itemTitle={item.title}
                 onSuccess={() => {
-                  // Refresh claim status
-                  claimsService.getMyClaims().then(claims => {
-                    const claim = claims.find(c => c.item_id === parseInt(id));
-                    setUserClaim(claim);
-                  });
+                  // Refresh item and claim status
+                  fetchItemAndClaim();
                 }}
               />
             </Card>

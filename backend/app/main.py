@@ -14,13 +14,20 @@ app = FastAPI(
 )
 
 # CRITICAL: CORS must be the FIRST middleware for proper header injection
+# Use settings for CORS origins to allow environment configuration
+cors_origins = settings.BACKEND_CORS_ORIGINS if settings.BACKEND_CORS_ORIGINS else []
+# Always include production frontend and localhost for development
+default_origins = [
+    "https://lost-found-pri.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173"
+]
+# Merge and deduplicate origins
+all_origins = list(set(cors_origins + default_origins)) if isinstance(cors_origins, list) else default_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://lost-found-pri.vercel.app",
-        "http://localhost:3000",
-        "http://localhost:5173"
-    ],
+    allow_origins=all_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

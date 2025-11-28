@@ -151,6 +151,13 @@ def create_claim(
     if item.type != ItemType.FOUND:
         raise HTTPException(status_code=400, detail="Only found items can be claimed")
     
+    # Check if item is still active (not claimed or resolved)
+    if item.status != ItemStatus.ACTIVE:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Item is already {item.status.value}. No further claims can be submitted."
+        )
+    
     # Check if user is the owner (can't claim own item)
     if item.user_id == current_user.id:
         raise HTTPException(status_code=400, detail="You cannot claim your own reported item")
@@ -208,8 +215,9 @@ def get_item_matches(
         raise HTTPException(status_code=404, detail="Item not found")
         
     # Only owner or admin can see matches
-    if not crud_user.is_superuser(current_user) and (item.user_id != current_user.id):
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    ADMIN_ROLE_ID = 3
+    if (current_user.role_id != ADMIN_ROLE_ID) and (item.user_id != current_user.id):
+        raise HTTPException(status_code=403, detail="Not enough permissions")
         
     matches = matching_service.find_potential_matches(db, item)
     return matches

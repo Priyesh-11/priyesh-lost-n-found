@@ -57,7 +57,6 @@ class ItemOut(ItemBase):
     is_approved: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
     images: List[ItemImageOut] = []
     owner: UserBasic
     category: CategoryOut
@@ -72,7 +71,6 @@ class ItemFilter(BaseModel):
     status: Optional[ItemStatus] = None
     category_id: Optional[int] = None
     location: Optional[str] = None
-    date_from: Optional[datetime] = None
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None
     user_id: Optional[int] = None

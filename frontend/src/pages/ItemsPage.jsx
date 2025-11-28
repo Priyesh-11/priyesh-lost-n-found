@@ -79,6 +79,16 @@ const ItemsPage = () => {
 
   useEffect(() => {
     fetchItems();
+    
+    // Refresh items when page becomes visible (user returns to tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchItems();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [searchParams]);
 
   useEffect(() => {

@@ -59,6 +59,7 @@ def verify_claim(
         raise HTTPException(status_code=404, detail="Claim not found")
     
     claim = crud_claim.update(db=db, db_obj=claim, obj_in=claim_update)
+    db.refresh(claim)
     
     # If claim is verified, update item status to CLAIMED (pending resolution)
     if claim.status == ClaimStatus.VERIFIED:
@@ -67,16 +68,23 @@ def verify_claim(
             item.status = ItemStatus.CLAIMED
             db.add(item)
             db.commit()
+            db.refresh(item)
             
-    # Send email notification
+    # Send email notification (with error handling)
     if claim.claimant and claim.item:
-        email_service.send_claim_status_email(
-            email_to=claim.claimant.email,
-            username=claim.claimant.full_name or claim.claimant.username,
-            item_title=claim.item.title,
-            status=claim.status,
-            admin_notes=claim.admin_notes
-        )
+        try:
+            email_service.send_claim_status_email(
+                email_to=claim.claimant.email,
+                username=claim.claimant.full_name or claim.claimant.username,
+                item_title=claim.item.title,
+                status=claim.status,
+                admin_notes=claim.admin_notes
+            )
+        except Exception as e:
+            # Log error but don't fail the request if email fails
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send claim status email: {str(e)}")
             
     return claim
 
