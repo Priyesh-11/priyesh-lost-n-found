@@ -13,22 +13,30 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Correct CORS
+# CRITICAL: CORS must be the FIRST middleware for proper header injection
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://lost-found-pri.vercel.app",
+        "http://localhost:3000",
         "http://localhost:5173"
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
-# Trusted host
+# TRUSTED HOST - MUST USE WILDCARDS to prevent blocking Vercel/Render subdomains
+# Without wildcards, requests are REJECTED BEFORE CORS runs = No CORS headers!
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"]
+    allowed_hosts=[
+        "*.vercel.app",        # Allows all Vercel deployments (prod + preview)
+        "*.onrender.com",      # Allows Render backend
+        "localhost",
+        "127.0.0.1"
+    ]
 )
 
 # Rate limiting
