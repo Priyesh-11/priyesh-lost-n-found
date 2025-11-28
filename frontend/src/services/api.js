@@ -4,6 +4,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://priyesh-lost-n-found-b
 
 const api = axios.create({
     baseURL: API_URL,
+    timeout: 30000, // 30 second timeout to prevent hanging
     // withCredentials: true,  // Removed to avoid strict CORS preflight issues
     headers: {
         'Content-Type': 'application/json',
@@ -20,6 +21,22 @@ api.interceptors.request.use(
         return config;
     },
     (error) => Promise.reject(error)
+);
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        // Handle network errors
+        if (!error.response) {
+            if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+                error.message = 'Request timeout. Please check your connection and try again.';
+            } else {
+                error.message = 'Network error. Please check your internet connection.';
+            }
+        }
+        return Promise.reject(error);
+    }
 );
 
 export const authService = {

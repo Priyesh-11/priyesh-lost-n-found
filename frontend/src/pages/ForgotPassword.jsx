@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { authService } from '../services/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -9,11 +9,19 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { Loader2, Mail, CheckCircle2 } from 'lucide-react';
 
 const ForgotPassword = () => {
-    const [email, setEmail] = useState('');
+    const location = useLocation();
+    const isResendVerification = location.state?.resendVerification || false;
+    const [email, setEmail] = useState(location.state?.email || '');
     const [loading, setLoading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
+    
+    useEffect(() => {
+        if (location.state?.email) {
+            setEmail(location.state.email);
+        }
+    }, [location.state]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -32,11 +40,20 @@ const ForgotPassword = () => {
 
         setLoading(true);
         try {
-            const data = await authService.forgotPassword(email);
-            setMessage(data.message || 'Password reset instructions have been sent to your email.');
+            let data;
+            if (isResendVerification) {
+                data = await authService.resendVerification(email);
+                setMessage(data.message || 'Verification email has been resent! Please check your inbox.');
+            } else {
+                data = await authService.forgotPassword(email);
+                setMessage(data.message || 'Password reset instructions have been sent to your email.');
+            }
             setSubmitted(true);
         } catch (error) {
-            setMessage(error.response?.data?.detail || 'If your email is registered, you will receive a password reset link.');
+            const defaultMsg = isResendVerification 
+                ? 'If your email is registered, you will receive a verification email.'
+                : 'If your email is registered, you will receive a password reset link.';
+            setMessage(error.response?.data?.detail || defaultMsg);
             setSubmitted(true);
         } finally {
             setLoading(false);
@@ -75,9 +92,13 @@ const ForgotPassword = () => {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full">
                 <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900">Forgot Password</h2>
+                    <h2 className="text-3xl font-bold text-gray-900">
+                        {isResendVerification ? 'Resend Verification Email' : 'Forgot Password'}
+                    </h2>
                     <p className="mt-2 text-gray-600">
-                        Enter your email address and we'll send you a link to reset your password.
+                        {isResendVerification
+                            ? "Enter your email address and we'll send you a new verification email."
+                            : "Enter your email address and we'll send you a link to reset your password."}
                     </p>
                 </div>
 
@@ -117,7 +138,7 @@ const ForgotPassword = () => {
                                     Sending...
                                 </>
                             ) : (
-                                'Send Reset Link'
+                                isResendVerification ? 'Resend Verification Email' : 'Send Reset Link'
                             )}
                         </Button>
 

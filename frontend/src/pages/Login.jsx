@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
-import { Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-
+import { Loader2, Mail, Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { ShineBorder } from '../components/ui/shine-border';
+import { useToast } from '../hooks/use-toast';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -21,6 +23,20 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Show message from registration if redirected
+  useEffect(() => {
+    if (location.state?.message) {
+      const emailText = location.state.email ? ` Check your email: ${location.state.email}` : '';
+      toast({
+        title: "Registration Successful! 🎉",
+        description: `${location.state.message}${emailText}`,
+        duration: 10000,
+      });
+      // Clear state to prevent showing again
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate, toast]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -57,14 +73,38 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const result = await login(formData.email, formData.password);
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout. Please check your connection and try again.')), 30000)
+      );
+      
+      const result = await Promise.race([login(formData.email, formData.password), timeoutPromise]);
+      
       if (result.success) {
+        toast({
+          title: "Login Successful!",
+          description: "Welcome back! Redirecting to dashboard...",
+        });
         navigate('/dashboard');
       } else {
-        setApiError(result.message || 'Login failed. Please try again.');
+        const errorMsg = result.message || 'Login failed. Please try again.';
+        setApiError(errorMsg);
+        toast({
+          title: "Login Failed",
+          description: errorMsg,
+          variant: "destructive",
+        });
+        
+        // If it's an email verification error, show resend option in the error message
       }
     } catch (error) {
-      setApiError('An error occurred. Please try again.');
+      const errorMessage = error.message || 'An error occurred. Please try again.';
+      setApiError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -83,7 +123,23 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
             {apiError && (
               <Alert variant="destructive">
-                <AlertDescription>{apiError}</AlertDescription>
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <p>{apiError}</p>
+                    {(apiError.includes('verify') || apiError.includes('verification')) && (
+                      <div className="mt-2 pt-2 border-t border-red-200">
+                        <p className="text-sm mb-2">Need to resend verification email?</p>
+                        <Link
+                          to="/forgot-password"
+                          state={{ resendVerification: true, email: formData.email }}
+                          className="text-sm text-blue-600 hover:underline font-medium"
+                        >
+                          Resend Verification Email →
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </AlertDescription>
               </Alert>
             )}
 

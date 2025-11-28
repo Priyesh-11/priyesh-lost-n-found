@@ -6,12 +6,14 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
-import { Loader2, User, Mail, Lock, Phone } from 'lucide-react';
+import { Loader2, User, Mail, Lock, Phone, CheckCircle } from 'lucide-react';
 import { ShineBorder } from '../components/ui/shine-border';
+import { useToast } from '../hooks/use-toast';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     fullName: '',
     username: '',
@@ -87,19 +89,60 @@ const Register = () => {
         ...rest,
         full_name: fullName
       };
-      const result = await register(registrationData);
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout. Please try again.')), 30000)
+      );
+      
+      const result = await Promise.race([register(registrationData), timeoutPromise]);
+      
       if (result.success) {
-        // Show success message
-        if (result.message) {
-          alert(result.message);
-        }
-        // Navigate to login page (user must verify email before logging in)
-        navigate('/login');
+        const userEmail = result.email || formData.email;
+        
+        // Show success toast with email verification message
+        toast({
+          title: "Registration Successful! 🎉",
+          description: `Account created! A verification email has been sent to ${userEmail}. Please check your email and click the verification link to activate your account before logging in.`,
+          duration: 10000, // Show for 10 seconds
+        });
+        
+        // Clear form
+        setFormData({
+          fullName: '',
+          username: '',
+          email: '',
+          phone: '',
+          password: '',
+          confirmPassword: ''
+        });
+        
+        // Navigate to login page after showing toast
+        setTimeout(() => {
+          navigate('/login', { 
+            state: { 
+              message: `Registration successful! A verification email has been sent to ${userEmail}. Please check your email and verify your account before logging in.`,
+              email: userEmail
+            } 
+          });
+        }, 1500);
       } else {
-        setApiError(result.message || 'Registration failed. Please try again.');
+        const errorMsg = result.message || 'Registration failed. Please try again.';
+        setApiError(errorMsg);
+        toast({
+          title: "Registration Failed",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      setApiError('An error occurred. Please try again.');
+      const errorMessage = error.message || 'An error occurred. Please try again.';
+      setApiError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

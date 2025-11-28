@@ -48,7 +48,17 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       return { success: true, user: userData };
     } catch (error) {
-      return { success: false, message: error.response?.data?.detail || 'Login failed' };
+      // Handle different error types
+      if (error.response) {
+        // Server responded with error
+        const errorDetail = error.response?.data?.detail || 'Login failed';
+        return { success: false, message: errorDetail };
+      } else if (error.message) {
+        // Network error or timeout
+        return { success: false, message: error.message };
+      } else {
+        return { success: false, message: 'Login failed. Please try again.' };
+      }
     }
   };
 
@@ -62,7 +72,17 @@ export const AuthProvider = ({ children }) => {
         email: data.email
       };
     } catch (error) {
-      return { success: false, message: error.response?.data?.detail || 'Registration failed' };
+      // Handle different error types
+      if (error.response) {
+        // Server responded with error
+        const errorDetail = error.response?.data?.detail || 'Registration failed';
+        return { success: false, message: errorDetail };
+      } else if (error.message) {
+        // Network error or timeout
+        return { success: false, message: error.message };
+      } else {
+        return { success: false, message: 'Registration failed. Please try again.' };
+      }
     }
   };
 
