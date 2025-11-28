@@ -13,21 +13,49 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return db.query(User).filter(User.username == username).first()
 
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
-        # Get the "user" role dynamically (don't assume role_id=1 exists)
+        # Get or create the "user" role dynamically
         from app.models.role import Role
+        from sqlalchemy.exc import IntegrityError
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        # Get or create user role
         user_role = db.query(Role).filter(Role.name == "user").first()
         if not user_role:
-            # Fallback: try to get role by id=1, or raise error
-            user_role = db.query(Role).filter(Role.id == 1).first()
-            if not user_role:
-                raise ValueError("User role not found in database. Please ensure roles are initialized.")
+            # Role doesn't exist - create it automatically
+            logger.warning("User role not found, creating it automatically")
+            try:
+                user_role = Role(name="user", permissions={"read": True, "write": True})
+                db.add(user_role)
+                db.flush()  # Flush to get the ID without committing
+                db.refresh(user_role)
+                logger.info(f"Created user role with id={user_role.id}")
+            except IntegrityError:
+                # Race condition: another request created it, fetch it
+                db.rollback()
+                user_role = db.query(Role).filter(Role.name == "user").first()
+                if not user_role:
+                    raise ValueError("Failed to get or create user role")
+        
+        # Ensure admin role also exists (for future use, non-blocking)
+        try:
+            admin_role = db.query(Role).filter(Role.name == "admin").first()
+            if not admin_role:
+                logger.warning("Admin role not found, creating it automatically")
+                admin_role = Role(name="admin", permissions={"all": True})
+                db.add(admin_role)
+                db.flush()
+        except IntegrityError:
+            # Admin role was created by another request, ignore
+            db.rollback()
         
         db_obj = User(
             email=obj_in.email,
             hashed_password=get_password_hash(obj_in.password),
             full_name=obj_in.full_name,
             username=obj_in.username,
-            role_id=user_role.id,  # Use dynamically found role ID
+            role_id=user_role.id,  # Use dynamically found or created role ID
         )
         db.add(db_obj)
         db.commit()
