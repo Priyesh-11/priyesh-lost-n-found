@@ -10,8 +10,11 @@ logger = logging.getLogger(__name__)
 class EmailService:
     def send_verification_email(self, email_to: str, token: str, username: str):
         """Send email verification link to user"""
+        logger.info(f"📧 send_verification_email called for {email_to}")
         subject = f"{settings.PROJECT_NAME} - Verify your email"
         link = f"{settings.FRONTEND_URL}/verify-email/{token}"
+        
+        logger.info(f"📧 Verification link: {link}")
         
         html_content = self._get_verification_email_template(username, link)
         text_content = f"""
@@ -30,7 +33,9 @@ class EmailService:
         The {settings.PROJECT_NAME} Team
         """
         
+        logger.info(f"📧 Calling _send_email for {email_to}")
         self._send_email(email_to, subject, html_content, text_content)
+        logger.info(f"📧 _send_email completed for {email_to}")
 
     def send_password_reset_email(self, email_to: str, token: str, username: str):
         """Send password reset link to user"""
