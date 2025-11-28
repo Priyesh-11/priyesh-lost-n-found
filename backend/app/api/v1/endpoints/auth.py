@@ -112,12 +112,21 @@ def register_user(
     
     # Queue verification email in the background so the API response returns immediately
     if user.verification_token:
-        background_tasks.add_task(
-            email_service.send_verification_email,
-            email_to=user.email,
-            token=user.verification_token,
-            username=user.username
-        )
+        def send_email_with_error_handling():
+            """Wrapper to handle email sending errors in background task"""
+            try:
+                email_service.send_verification_email(
+                    email_to=user.email,
+                    token=user.verification_token,
+                    username=user.username
+                )
+                logger.info(f"✅ Verification email queued successfully for {user.email}")
+            except Exception as e:
+                logger.error(f"❌ Failed to send verification email to {user.email}: {type(e).__name__}: {str(e)}", exc_info=True)
+                # Don't raise - background task errors shouldn't affect the response
+        
+        background_tasks.add_task(send_email_with_error_handling)
+        logger.info(f"📧 Verification email task queued for {user.email}")
 
     # Return success message WITHOUT tokens - user must verify email first
     return {
@@ -166,12 +175,20 @@ def resend_verification(
         )
     
     if user.verification_token:
-        background_tasks.add_task(
-            email_service.send_verification_email,
-            email_to=user.email,
-            token=user.verification_token,
-            username=user.username
-        )
+        def send_email_with_error_handling():
+            """Wrapper to handle email sending errors in background task"""
+            try:
+                email_service.send_verification_email(
+                    email_to=user.email,
+                    token=user.verification_token,
+                    username=user.username
+                )
+                logger.info(f"✅ Resend verification email sent successfully to {user.email}")
+            except Exception as e:
+                logger.error(f"❌ Failed to resend verification email to {user.email}: {type(e).__name__}: {str(e)}", exc_info=True)
+        
+        background_tasks.add_task(send_email_with_error_handling)
+        logger.info(f"📧 Resend verification email task queued for {user.email}")
     
     return {"message": "Verification email sent! Please check your inbox."}
 

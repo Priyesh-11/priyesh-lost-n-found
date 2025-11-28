@@ -59,27 +59,35 @@ class EmailService:
     def _send_email(self, email_to: str, subject: str, html_content: str, text_content: str):
         """Send email via SMTP or log to console in development"""
         
+        # Check SMTP configuration
+        smtp_host = settings.SMTP_HOST
+        smtp_user = settings.SMTP_USER
+        smtp_password = settings.SMTP_PASSWORD
+        
         # Development mode: log to console (only if SMTP not configured)
-        if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-            logger.info("="*80)
-            logger.info(f"📧 EMAIL TO: {email_to}")
-            logger.info(f"📧 SUBJECT: {subject}")
-            logger.info("="*80)
-            logger.info(text_content)
-            logger.info("="*80)
-            print(f"\n{'='*80}\n📧 EMAIL TO: {email_to}\n📧 SUBJECT: {subject}\n{'='*80}\n{text_content}\n{'='*80}\n")
-            logger.warning("SMTP credentials not configured. Email logged to console only.")
+        if not smtp_host or not smtp_user or not smtp_password:
+            logger.warning("="*80)
+            logger.warning("⚠️  SMTP credentials not configured. Email logged to console only.")
+            logger.warning(f"📧 EMAIL TO: {email_to}")
+            logger.warning(f"📧 SUBJECT: {subject}")
+            logger.warning("="*80)
+            logger.warning(text_content)
+            logger.warning("="*80)
+            print(f"\n{'='*80}\n⚠️  SMTP NOT CONFIGURED - Email logged to console only\n{'='*80}")
+            print(f"📧 EMAIL TO: {email_to}\n📧 SUBJECT: {subject}\n{'='*80}\n{text_content}\n{'='*80}\n")
+            logger.warning("To enable email sending, configure SMTP_HOST, SMTP_USER, and SMTP_PASSWORD environment variables.")
             return
         
         # Production mode: send via SMTP
         try:
-            smtp_host = settings.SMTP_HOST
             smtp_port = settings.SMTP_PORT or 587
             smtp_timeout = getattr(settings, "SMTP_TIMEOUT", 15) or 15
+            
+            logger.info(f"📧 Attempting to send email to {email_to} via {smtp_host}:{smtp_port}")
 
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
-            msg['From'] = settings.EMAILS_FROM_EMAIL or settings.SMTP_USER
+            msg['From'] = settings.EMAILS_FROM_EMAIL or smtp_user
             msg['To'] = email_to
             
             part1 = MIMEText(text_content, 'plain')
@@ -88,18 +96,41 @@ class EmailService:
             msg.attach(part1)
             msg.attach(part2)
             
+            logger.info(f"🔌 Connecting to SMTP server {smtp_host}:{smtp_port}...")
             with smtplib.SMTP(smtp_host, smtp_port, timeout=smtp_timeout) as server:
+                logger.info("🔐 Starting TLS...")
                 server.starttls()
-                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                
+                logger.info(f"🔑 Authenticating as {smtp_user}...")
+                server.login(smtp_user, smtp_password)
+                
+                logger.info(f"📤 Sending email to {email_to}...")
                 server.send_message(msg)
                 
             logger.info(f"✅ Email sent successfully to {email_to}")
             print(f"✅ Email sent successfully to {email_to}")
+        except smtplib.SMTPAuthenticationError as e:
+            error_msg = f"SMTP Authentication failed. Check your SMTP_USER and SMTP_PASSWORD. For Gmail, you may need an App Password. Error: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            print(f"❌ {error_msg}")
+            raise  # Re-raise to be caught by caller
+        except smtplib.SMTPConnectError as e:
+            error_msg = f"Failed to connect to SMTP server {smtp_host}:{smtp_port}. Check SMTP_HOST and SMTP_PORT. Error: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            print(f"❌ {error_msg}")
+            raise
+        except smtplib.SMTPException as e:
+            error_msg = f"SMTP error while sending email to {email_to}: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            print(f"❌ {error_msg}")
+            raise
         except Exception as e:
-            logger.error(f"❌ Failed to send email to {email_to}: {str(e)}")
-            print(f"❌ Failed to send email to {email_to}: {str(e)}")
+            error_msg = f"Unexpected error sending email to {email_to}: {type(e).__name__}: {str(e)}"
+            logger.error(f"❌ {error_msg}", exc_info=True)
+            print(f"❌ {error_msg}")
             # Fall back to console logging if SMTP fails
             print(f"\n{'='*80}\n📧 EMAIL TO: {email_to}\n📧 SUBJECT: {subject}\n{'='*80}\n{text_content}\n{'='*80}\n")
+            raise
 
     def _get_verification_email_template(self, username: str, link: str) -> str:
         """HTML template for verification email"""
