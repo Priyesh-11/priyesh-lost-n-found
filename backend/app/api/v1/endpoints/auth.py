@@ -1,6 +1,6 @@
 from datetime import timedelta
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.api import deps
@@ -8,6 +8,7 @@ from app.core import security
 from app.core.config import settings
 from app.crud.crud_user import user as crud_user
 from app.services.auth_service import auth_service
+from app.services.email_service import email_service
 from app.schemas.auth import (
     Token, 
     LoginRequest, 
@@ -50,6 +51,7 @@ def login_access_token(
 @router.post("/register", response_model=dict)
 def register_user(
     *,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(deps.get_db),
     user_in: UserCreate,
 ) -> Any:
@@ -108,6 +110,15 @@ def register_user(
             detail="An unexpected error occurred during registration. Please try again."
         )
     
+    # Queue verification email in the background so the API response returns immediately
+    if user.verification_token:
+        background_tasks.add_task(
+            email_service.send_verification_email,
+            email_to=user.email,
+            token=user.verification_token,
+            username=user.username
+        )
+
     # Return success message WITHOUT tokens - user must verify email first
     return {
         "message": "Registration successful! Please check your email to verify your account before logging in.",
@@ -141,18 +152,28 @@ def verify_email(
 @router.post("/resend-verification")
 def resend_verification(
     *,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(deps.get_db),
     request: ResendVerificationRequest,
 ) -> Any:
     """Resend verification email"""
     try:
-        auth_service.resend_verification_email(db, request.email)
-        return {"message": "Verification email sent! Please check your inbox."}
+        user = auth_service.resend_verification_email(db, request.email)
     except ValueError as e:
         raise HTTPException(
             status_code=400,
             detail=str(e),
         )
+    
+    if user.verification_token:
+        background_tasks.add_task(
+            email_service.send_verification_email,
+            email_to=user.email,
+            token=user.verification_token,
+            username=user.username
+        )
+    
+    return {"message": "Verification email sent! Please check your inbox."}
 
 @router.post("/forgot-password")
 def forgot_password(

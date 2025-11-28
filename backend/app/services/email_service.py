@@ -73,6 +73,10 @@ class EmailService:
         
         # Production mode: send via SMTP
         try:
+            smtp_host = settings.SMTP_HOST
+            smtp_port = settings.SMTP_PORT or 587
+            smtp_timeout = getattr(settings, "SMTP_TIMEOUT", 15) or 15
+
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
             msg['From'] = settings.EMAILS_FROM_EMAIL or settings.SMTP_USER
@@ -84,7 +88,7 @@ class EmailService:
             msg.attach(part1)
             msg.attach(part2)
             
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=smtp_timeout) as server:
                 server.starttls()
                 server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
                 server.send_message(msg)

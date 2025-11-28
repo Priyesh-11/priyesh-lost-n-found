@@ -48,6 +48,13 @@
   - Updated ForgotPassword page to support resending verification emails
   - Clear UI for requesting new verification email
 
+### 7. Backend Email Delivery Improvements
+- **Problem**: Registration API requests waited for SMTP to finish, causing long buffering or timeouts when Gmail throttled the connection.
+- **Fix**:
+  - Registration and resend-verification endpoints now enqueue emails using FastAPI `BackgroundTasks` so HTTP responses return immediately.
+  - Added `SMTP_TIMEOUT` setting (default 15s) and applied it to the SMTP client to avoid hanging sockets.
+  - `AuthService` now focuses on database work and leaves email dispatch to the API layer, improving separation of concerns.
+
 ## Files Modified
 
 ### Frontend

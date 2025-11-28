@@ -30,17 +30,6 @@ class AuthService:
             db.commit()
             db.refresh(user)
             
-            # Send verification email (non-blocking - don't fail registration if email fails)
-            try:
-                email_service.send_verification_email(
-                    email_to=user.email,
-                    token=token,
-                    username=user.username
-                )
-            except Exception as e:
-                logger.error(f"Failed to send verification email: {str(e)}")
-                # Don't raise - registration succeeded, email is secondary
-            
             return user
         except ValueError:
             # Re-raise business logic errors
@@ -79,16 +68,9 @@ class AuthService:
         user.verification_token = token
         db.add(user)
         db.commit()
-        
-        # Send verification email
-        try:
-            email_service.send_verification_email(
-                email_to=user.email,
-                token=token,
-                username=user.username
-            )
-        except Exception as e:
-            logger.error(f"Failed to send verification email: {str(e)}")
+        db.refresh(user)
+
+        return user
     
     def request_password_reset(self, db: Session, email: str) -> None:
         """Generate password reset token and send email"""
