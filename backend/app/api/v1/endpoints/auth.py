@@ -56,12 +56,56 @@ def register_user(
     """
     Register new user
     """
+    import logging
+    from sqlalchemy.exc import IntegrityError, OperationalError, DatabaseError
+    
+    logger = logging.getLogger(__name__)
+    
     try:
         user = auth_service.register_user(db=db, user_in=user_in)
     except ValueError as e:
+        # Business logic errors (email/username already exists)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
+        )
+    except IntegrityError as e:
+        # Database constraint violations (duplicate email/username)
+        logger.error(f"Database integrity error during registration: {str(e)}")
+        db.rollback()
+        
+        # Check if it's a duplicate email or username
+        error_msg = str(e.orig) if hasattr(e, 'orig') else str(e)
+        if 'email' in error_msg.lower() or 'duplicate' in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        elif 'username' in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already taken"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Registration failed. Please check your information and try again."
+            )
+    except (OperationalError, DatabaseError) as e:
+        # Database connection or operational errors
+        logger.error(f"Database error during registration: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database service temporarily unavailable. Please try again later."
+        )
+    except Exception as e:
+        # Catch all other exceptions
+        logger.error(f"Unexpected error during registration: {type(e).__name__}: {str(e)}", exc_info=True)
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred during registration. Please try again."
         )
     
     # Return success message WITHOUT tokens - user must verify email first

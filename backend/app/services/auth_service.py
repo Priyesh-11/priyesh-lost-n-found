@@ -13,33 +13,43 @@ logger = logging.getLogger(__name__)
 class AuthService:
     def register_user(self, db: Session, user_in: UserCreate) -> User:
         """Register a new user and send verification email"""
-        # Check if user exists
-        if crud_user.get_by_email(db, email=user_in.email):
-            raise ValueError("Email already registered")
-        if crud_user.get_by_username(db, username=user_in.username):
-            raise ValueError("Username already taken")
-        
-        # Create user
-        user = crud_user.create(db, obj_in=user_in)
-        
-        # Generate verification token
-        token = generate_verification_token()
-        user.verification_token = token
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        
-        # Send verification email
         try:
-            email_service.send_verification_email(
-                email_to=user.email,
-                token=token,
-                username=user.username
-            )
+            # Check if user exists
+            if crud_user.get_by_email(db, email=user_in.email):
+                raise ValueError("Email already registered")
+            if crud_user.get_by_username(db, username=user_in.username):
+                raise ValueError("Username already taken")
+            
+            # Create user
+            user = crud_user.create(db, obj_in=user_in)
+            
+            # Generate verification token
+            token = generate_verification_token()
+            user.verification_token = token
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            
+            # Send verification email (non-blocking - don't fail registration if email fails)
+            try:
+                email_service.send_verification_email(
+                    email_to=user.email,
+                    token=token,
+                    username=user.username
+                )
+            except Exception as e:
+                logger.error(f"Failed to send verification email: {str(e)}")
+                # Don't raise - registration succeeded, email is secondary
+            
+            return user
+        except ValueError:
+            # Re-raise business logic errors
+            raise
         except Exception as e:
-            logger.error(f"Failed to send verification email: {str(e)}")
-        
-        return user
+            # Rollback on any other error
+            db.rollback()
+            logger.error(f"Error during user registration: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise
     
     def verify_email(self, db: Session, token: str) -> User:
         """Verify user email with token"""

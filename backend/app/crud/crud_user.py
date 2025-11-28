@@ -13,12 +13,21 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return db.query(User).filter(User.username == username).first()
 
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
+        # Get the "user" role dynamically (don't assume role_id=1 exists)
+        from app.models.role import Role
+        user_role = db.query(Role).filter(Role.name == "user").first()
+        if not user_role:
+            # Fallback: try to get role by id=1, or raise error
+            user_role = db.query(Role).filter(Role.id == 1).first()
+            if not user_role:
+                raise ValueError("User role not found in database. Please ensure roles are initialized.")
+        
         db_obj = User(
             email=obj_in.email,
             hashed_password=get_password_hash(obj_in.password),
             full_name=obj_in.full_name,
             username=obj_in.username,
-            role_id=1, # Default to user role
+            role_id=user_role.id,  # Use dynamically found role ID
         )
         db.add(db_obj)
         db.commit()
