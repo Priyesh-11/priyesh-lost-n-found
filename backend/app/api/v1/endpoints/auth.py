@@ -1,25 +1,27 @@
+import logging
 from datetime import timedelta
 from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+
 from app.api import deps
 from app.core import security
-from app.core.config import settings
 from app.crud.crud_user import user as crud_user
-from app.services.auth_service import auth_service
-from app.services.email_service import email_service
-from app.schemas.auth import (
-    Token, 
-    LoginRequest, 
-    PasswordResetRequest, 
-    PasswordResetConfirm,
-    ResendVerificationRequest
-)
-from app.schemas.user import UserCreate, UserOut
 from app.models.user import User
+from app.schemas.auth import (
+    PasswordResetConfirm,
+    PasswordResetRequest,
+    ResendVerificationRequest,
+    Token,
+)
+from app.schemas.user import UserCreate
+from app.services.auth_service import auth_service
+from app.services.email import send_verification_email
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post("/login", response_model=Token)
 def login_access_token(
@@ -59,10 +61,7 @@ def register_user(
     """
     Register new user
     """
-    import logging
-    from sqlalchemy.exc import IntegrityError, OperationalError, DatabaseError
-    
-    logger = logging.getLogger(__name__)
+    from sqlalchemy.exc import DatabaseError, IntegrityError, OperationalError
     
     try:
         user = auth_service.register_user(db=db, user_in=user_in)
@@ -116,17 +115,11 @@ def register_user(
         # Capture values before background task to avoid closure issues
         user_email = user.email
         user_token = user.verification_token
-        user_username = user.username
-        
         def send_email_with_error_handling():
             """Wrapper to handle email sending errors in background task"""
             try:
                 logger.info(f"📧 Background task started: Sending verification email to {user_email}")
-                email_service.send_verification_email(
-                    email_to=user_email,
-                    token=user_token,
-                    username=user_username
-                )
+                send_verification_email(user_email, user_token)
                 logger.info(f"✅ Verification email sent successfully to {user_email}")
             except Exception as e:
                 logger.error(f"❌ Failed to send verification email to {user_email}: {type(e).__name__}: {str(e)}", exc_info=True)
@@ -185,17 +178,11 @@ def resend_verification(
         # Capture values before background task to avoid closure issues
         user_email = user.email
         user_token = user.verification_token
-        user_username = user.username
-        
         def send_email_with_error_handling():
             """Wrapper to handle email sending errors in background task"""
             try:
                 logger.info(f"📧 Background task started: Resending verification email to {user_email}")
-                email_service.send_verification_email(
-                    email_to=user_email,
-                    token=user_token,
-                    username=user_username
-                )
+                send_verification_email(user_email, user_token)
                 logger.info(f"✅ Resend verification email sent successfully to {user_email}")
             except Exception as e:
                 logger.error(f"❌ Failed to resend verification email to {user_email}: {type(e).__name__}: {str(e)}", exc_info=True)
@@ -240,38 +227,7 @@ def reset_password(
         )
 
 @router.post("/test-email")
-def test_email(
-    *,
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    """Test endpoint to verify email sending (requires authentication)"""
-    from app.core.config import settings
-    
-    # Check if SMTP is configured
-    smtp_status = {
-        "SMTP_HOST": settings.SMTP_HOST or "NOT SET",
-        "SMTP_PORT": settings.SMTP_PORT or 587,
-        "SMTP_USER": settings.SMTP_USER or "NOT SET",
-        "SMTP_PASSWORD": "SET" if settings.SMTP_PASSWORD else "NOT SET",
-        "FRONTEND_URL": settings.FRONTEND_URL,
-    }
-    
-    # Try to send a test email
-    try:
-        email_service.send_verification_email(
-            email_to=current_user.email,
-            token="test-token-12345",
-            username=current_user.username
-        )
-        return {
-            "status": "success",
-            "message": f"Test email sent to {current_user.email}. Check your inbox!",
-            "smtp_config": smtp_status
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Failed to send test email: {str(e)}",
-            "smtp_config": smtp_status,
-            "error_type": type(e).__name__
-        }
+def test_email() -> Any:
+    """Simple end-to-end test for Resend integration."""
+    send_verification_email("your-email@gmail.com", "test-token")
+    return {"status": "success", "message": "Test email sent"}

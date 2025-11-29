@@ -64,25 +64,22 @@ app.include_router(claims.router, prefix=f"{settings.API_V1_STR}/claims", tags=[
 
 @app.on_event("startup")
 async def startup_event():
-    """Validate SMTP configuration on startup"""
-    logger.info("="*80)
+    """Validate Resend configuration on startup"""
+    logger.info("=" * 80)
     logger.info("🚀 Starting Lost & Found API")
-    logger.info("="*80)
-    
-    # Check SMTP configuration
-    if settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD:
-        logger.info(f"✅ SMTP configured: {settings.SMTP_HOST}:{settings.SMTP_PORT or 587}")
-        logger.info(f"   From: {settings.EMAILS_FROM_EMAIL or settings.SMTP_USER}")
-        logger.info("   Email sending is ENABLED")
+    logger.info("=" * 80)
+
+    if settings.RESEND_API_KEY and settings.RESEND_FROM_EMAIL:
+        logger.info("✅ Resend configured")
+        logger.info(f"   From: {settings.RESEND_FROM_EMAIL}")
+        logger.info(f"   Frontend URL: {settings.FRONTEND_URL}")
     else:
-        logger.warning("⚠️  SMTP NOT FULLY CONFIGURED:")
-        logger.warning(f"   SMTP_HOST: {'✅' if settings.SMTP_HOST else '❌'}")
-        logger.warning(f"   SMTP_USER: {'✅' if settings.SMTP_USER else '❌'}")
-        logger.warning(f"   SMTP_PASSWORD: {'✅' if settings.SMTP_PASSWORD else '❌'}")
-        logger.warning("   ⚠️  Emails will be logged to console only!")
-        logger.warning("   To enable email sending, set SMTP_HOST, SMTP_USER, and SMTP_PASSWORD environment variables")
-    
-    logger.info("="*80)
+        logger.warning("⚠️  Resend NOT FULLY CONFIGURED:")
+        logger.warning(f"   RESEND_API_KEY: {'✅' if settings.RESEND_API_KEY else '❌'}")
+        logger.warning(f"   RESEND_FROM_EMAIL: {'✅' if settings.RESEND_FROM_EMAIL else '❌'}")
+        logger.warning("   Emails will fail until both variables are set.")
+
+    logger.info("=" * 80)
 
 @app.get("/")
 def root():

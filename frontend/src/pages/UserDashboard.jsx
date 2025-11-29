@@ -23,39 +23,39 @@ const UserDashboard = () => {
     claims: 0
   });
 
-  const fetchUserData = async () => {
-    if (!user?.id) return;
+    const fetchUserData = async () => {
+      if (!user?.id) return;
 
-    try {
-      const data = await itemsService.getAll({ user_id: user.id, status: 'all' });
-      const items = Array.isArray(data) ? data : data.items || [];
+      try {
+        const data = await itemsService.getAll({ user_id: user.id, status: 'all' });
+        const items = Array.isArray(data) ? data : data.items || [];
 
-      const mappedItems = items.map(item => ({
-        ...item,
-        category: item.category ? item.category.name : 'other',
-        images: item.images && item.images.length > 0 ? item.images.map(img => img.image_url) : []
-      }));
+        const mappedItems = items.map(item => ({
+          ...item,
+          category: item.category ? item.category.name : 'other',
+          images: item.images && item.images.length > 0 ? item.images.map(img => img.image_url) : []
+        }));
 
-      setUserItems(mappedItems);
+        setUserItems(mappedItems);
 
-      const claimsData = await claimsService.getMyClaims();
-      setUserClaims(claimsData);
+        const claimsData = await claimsService.getMyClaims();
+        setUserClaims(claimsData);
 
-      const lostItems = mappedItems.filter(i => i.type === 'lost');
-      const foundItems = mappedItems.filter(i => i.type === 'found');
-      const resolvedItems = mappedItems.filter(i => i.status === 'resolved');
+        const lostItems = mappedItems.filter(i => i.type === 'lost');
+        const foundItems = mappedItems.filter(i => i.type === 'found');
+        const resolvedItems = mappedItems.filter(i => i.status === 'resolved');
 
-      setStats({
-        total: mappedItems.length,
-        lost: lostItems.length,
-        found: foundItems.length,
-        resolved: resolvedItems.length,
-        claims: claimsData.length
-      });
-    } catch (error) {
-      console.error("Failed to fetch user data:", error);
-    }
-  };
+        setStats({
+          total: mappedItems.length,
+          lost: lostItems.length,
+          found: foundItems.length,
+          resolved: resolvedItems.length,
+          claims: claimsData.length
+        });
+      } catch (error) {
+        console.error("Failed to fetch user data:", error);
+      }
+    };
 
   useEffect(() => {
     fetchUserData();

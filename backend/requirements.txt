@@ -16,3 +16,4 @@ alembic
 cloudinary
 fuzzywuzzy
 python-Levenshtein
+requests

@@ -1,16 +1,21 @@
+import logging
 from typing import Any, List
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.api import deps
-from app.schemas.claim import Claim, ClaimUpdate
-from app.schemas.item import ItemOut
 from app.crud.crud_claim import claim as crud_claim
 from app.crud.crud_item import item as crud_item
-from app.models.user import User
 from app.models.claim import ClaimStatus
 from app.models.item import ItemStatus
+from app.models.user import User
+from app.schemas.claim import Claim, ClaimUpdate
+from app.schemas.item import ItemOut
+from app.services.email import send_claim_status_email
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 def check_admin_permissions(current_user: User):
     if current_user.role_id != 3: # Admin Role ID
@@ -39,8 +44,6 @@ def read_all_claims(
             claim.item_title = claim.item.title
     
     return claims
-
-from app.services.email_service import email_service
 
 @router.put("/claims/{id}/verify", response_model=Claim)
 def verify_claim(
@@ -73,17 +76,14 @@ def verify_claim(
     # Send email notification (with error handling)
     if claim.claimant and claim.item:
         try:
-            email_service.send_claim_status_email(
-                email_to=claim.claimant.email,
+            send_claim_status_email(
+                to_email=claim.claimant.email,
                 username=claim.claimant.full_name or claim.claimant.username,
                 item_title=claim.item.title,
                 status=claim.status,
-                admin_notes=claim.admin_notes
+                admin_notes=claim.admin_notes,
             )
         except Exception as e:
-            # Log error but don't fail the request if email fails
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Failed to send claim status email: {str(e)}")
             
     return claim

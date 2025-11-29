@@ -42,14 +42,9 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
     
-    # SMTP
-    SMTP_HOST: Optional[str] = None
-    SMTP_PORT: Optional[int] = None
-    SMTP_USER: Optional[str] = None
-    SMTP_PASSWORD: Optional[str] = None
-    SMTP_TIMEOUT: int = 15  # seconds
-    EMAILS_FROM_EMAIL: Optional[EmailStr] = None
-    EMAILS_FROM_NAME: Optional[str] = None
+    # Resend Email
+    RESEND_API_KEY: str
+    RESEND_FROM_EMAIL: EmailStr
     
     # Cloudinary Image Upload
     CLOUDINARY_CLOUD_NAME: Optional[str] = None

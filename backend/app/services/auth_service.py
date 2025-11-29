@@ -1,12 +1,13 @@
-from typing import Optional
-from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
-from app.crud.crud_user import user as crud_user
-from app.schemas.user import UserCreate
-from app.models.user import User
-from app.core.security import generate_verification_token
-from app.services.email_service import email_service
 import logging
+from datetime import datetime, timedelta
+
+from sqlalchemy.orm import Session
+
+from app.core.security import generate_verification_token
+from app.crud.crud_user import user as crud_user
+from app.models.user import User
+from app.schemas.user import UserCreate
+from app.services.email import send_password_reset_email
 
 logger = logging.getLogger(__name__)
 
@@ -88,11 +89,7 @@ class AuthService:
         
         # Send password reset email
         try:
-            email_service.send_password_reset_email(
-                email_to=user.email,
-                token=token,
-                username=user.username
-            )
+            send_password_reset_email(user.email, token)
         except Exception as e:
             logger.error(f"Failed to send password reset email: {str(e)}")
     
